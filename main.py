@@ -17,23 +17,8 @@ app.add_middleware(
 )
 
 # --- 2. LOAD THE MODEL ---
-class CompatibleInputLayer(tf.keras.layers.InputLayer):
-    @classmethod
-    def from_config(cls, config):
-        config = dict(config)
-        batch_shape = config.pop("batch_shape", None)
-        config.pop("optional", None)
-        if batch_shape is not None:
-            config["batch_input_shape"] = batch_shape
-        return cls(**config)
-
-
 print("Loading model...")
-model = tf.keras.models.load_model(
-    'nigerian_food_model.keras',
-    custom_objects={"InputLayer": CompatibleInputLayer},
-    compile=False,
-)
+model = tf.keras.models.load_model('nigerian_food_model.keras', compile=False)
 preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
 print("Model loaded successfully!")
 
