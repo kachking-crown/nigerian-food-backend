@@ -1,6 +1,10 @@
 import io
+import json
 import numpy as np
+import os
 import tensorflow as tf
+import tempfile
+import zipfile
 from PIL import Image
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,20 +21,35 @@ app.add_middleware(
 )
 
 # --- 2. LOAD THE MODEL ---
-class CompatibleDense(tf.keras.layers.Dense):
-    @classmethod
-    def from_config(cls, config):
-        config = dict(config)
-        config.pop("quantization_config", None)
-        return cls(**config)
+def load_model_compatibly(model_path):
+    with zipfile.ZipFile(model_path, "r") as source:
+        config = json.loads(source.read("config.json"))
+
+        def remove_incompatible_fields(value):
+            if isinstance(value, dict):
+                value.pop("quantization_config", None)
+                for child in value.values():
+                    remove_incompatible_fields(child)
+            elif isinstance(value, list):
+                for child in value:
+                    remove_incompatible_fields(child)
+
+        remove_incompatible_fields(config)
+
+        temporary_model = tempfile.NamedTemporaryFile(suffix=".keras", delete=False)
+        temporary_model.close()
+        try:
+            with zipfile.ZipFile(temporary_model.name, "w") as target:
+                for item in source.infolist():
+                    content = json.dumps(config).encode("utf-8") if item.filename == "config.json" else source.read(item.filename)
+                    target.writestr(item, content)
+            return tf.keras.models.load_model(temporary_model.name, compile=False)
+        finally:
+            os.unlink(temporary_model.name)
 
 
 print("Loading model...")
-model = tf.keras.models.load_model(
-    'nigerian_food_model.keras',
-    custom_objects={"Dense": CompatibleDense},
-    compile=False,
-)
+model = load_model_compatibly('nigerian_food_model.keras')
 preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
 print("Model loaded successfully!")
 
