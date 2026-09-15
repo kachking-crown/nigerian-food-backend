@@ -17,8 +17,20 @@ app.add_middleware(
 )
 
 # --- 2. LOAD THE MODEL ---
+class CompatibleDense(tf.keras.layers.Dense):
+    @classmethod
+    def from_config(cls, config):
+        config = dict(config)
+        config.pop("quantization_config", None)
+        return cls(**config)
+
+
 print("Loading model...")
-model = tf.keras.models.load_model('nigerian_food_model.keras', compile=False)
+model = tf.keras.models.load_model(
+    'nigerian_food_model.keras',
+    custom_objects={"Dense": CompatibleDense},
+    compile=False,
+)
 preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
 print("Model loaded successfully!")
 
