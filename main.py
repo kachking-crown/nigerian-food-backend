@@ -18,7 +18,7 @@ app.add_middleware(
 
 # --- 2. LOAD THE MODEL ---
 print("Loading model...")
-model = tf.keras.models.load_model('nigerian_food_weights.weights.h5')
+model = tf.keras.models.load_model('nigerian_food_model.keras')
 preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
 print("Model loaded successfully!")
 
